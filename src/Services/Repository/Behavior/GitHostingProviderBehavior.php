@@ -37,6 +37,14 @@ abstract class GitHostingProviderBehavior implements RepositoryBehavior
      */
     protected string $remote;
 
+    /**
+     * Text to be inserted as description for the pull request.
+     * @see sendChange()
+     */
+    protected string $prBody = <<< EOT
+        This pull request contains some translation updates.
+        EOT;
+
 
     public function __construct(GitHostingProviderService $api, GitHostingProviderStatusService $statusService)
     {
@@ -73,7 +81,7 @@ abstract class GitHostingProviderBehavior implements RepositoryBehavior
             $update->getRepository()->getUrl(),
             $remoteUrl,
             'Translation update (' . $update->getLanguage() . ')',
-            'This pull request contains some translation updates.'
+            $this->prBody
         );
     }
 
