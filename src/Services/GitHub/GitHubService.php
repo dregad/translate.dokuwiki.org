@@ -101,9 +101,9 @@ class GitHubService extends GitHostingProviderService
      * @throws GitHubServiceException
      * @throws Exception only if in 'test' environment
      */
-    public function getOpenPRListInfo(string $url, string $languageCode): array
+    public function getOpenPRListInfo(string $urlUpstream, string $languageCode): array
     {
-        [$user, $repository] = $this->getUsernameAndRepositoryFromURL($url);
+        [$user, $repository] = $this->getUsernameAndRepositoryFromURL($urlUpstream);
 
         $info = [
             'listURL' => '',
