@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Services;
+
+use App\Services\GitHub\GitHubService;
+use App\Services\GitLab\GitLabService;
+use Cache\Adapter\Filesystem\FilesystemCachePool;
+use Github\Client as GithubClient;
+use Gitlab\Client as GitlabClient;
+use League\Flysystem\Adapter\Local;
+use League\Flysystem\Filesystem;
+
+/**
+ * Parent Class for Git Hosting Provider Services.
+ *
+ * @see GitHubService, GitLabService
+ */
+abstract class GitHostingProviderService
+{
+
+    /**
+     * PCRE pattern to parse repository and username from URL.
+     * Must be defined by child class.
+     * @see getUsernameAndRepositoryFromURL()
+     */
+    protected const REGEX_REPO_USER = '';
+
+    /**
+     * Hosting Provider identifier.
+     * Must be defined by child class.
+     */
+    protected string $provider;
+
+    /**
+     * Hosting provider-specific Exception to be thrown.
+     */
+    protected string $exceptionType;
+
+    /**
+     * Git Repository client API.
+     * Actual type depends on child class.
+     * @var GithubClient|GitlabClient
+     */
+    protected $client;
+
+    /**
+     * Repository URL
+     */
+    protected string $url;
+
+    public function __construct(string $apiToken, string $dataFolder, string $url, bool $autoStartup = true)
+    {
+        $this->url = $url;
+    }
+
+    protected function getCachePool(string $dataFolder): FilesystemCachePool
+    {
+        // folders are relative to folder set here
+        $filesystemAdapter = new Local($dataFolder);
+        $filesystem = new Filesystem($filesystemAdapter);
+
+        $pool = new FilesystemCachePool($filesystem);
+        $pool->setFolder('cache/' . strtolower($this->provider));
+
+        return $pool;
+    }
+
+    /**
+     * Create fork in our Hosting Provider account
+     *
+     * @param string $url URL to create the fork from
+     * @return string Git URL of the fork
+     */
+    abstract public function createFork(string $url): string;
+
+    /**
+     * Delete fork from our Hosting Provider account
+     *
+     * @param string $remoteUrl Git url of the forked repository
+     */
+    abstract public function deleteFork(string $remoteUrl): void;
+
+    /**
+     * @param string $patchBranch name of branch with language update
+     * @param string $destinationBranch name of branch at remote
+     * @param string $languageCode
+     * @param string $url git url original upstream repository
+     * @param string $patchUrl remote url
+     */
+    abstract public function createPullRequest(string $patchBranch, string $destinationBranch, string $languageCode, string $url, string $patchUrl): void;
+
+    /**
+     * Get information about the open pull requests i.e. url and count
+     *
+     * @param string $urlUpstream original git clone url
+     * @param string $languageCode
+     * @return array{count: int, listURL: string, title: string}
+     */
+    abstract public function getOpenPRListInfo(string $urlUpstream, string $languageCode): array;
+
+    /**
+     * @param string $url git clone url
+     * @return array with user's account name, repository name
+     */
+    protected function getUsernameAndRepositoryFromURL(string $url): array
+    {
+        $result = preg_replace($this::REGEX_REPO_USER, '$2', $url, 1, $counter);
+        if ($counter === 0) {
+            throw new $this->exceptionType('Invalid ' . $this->provider . ' clone URL: ' . $url);
+        }
+        return explode('/', $result);
+    }
+
+}

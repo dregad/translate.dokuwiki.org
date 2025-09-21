@@ -2,49 +2,45 @@
 
 namespace App\Services\GitHub;
 
-use Cache\Adapter\Filesystem\FilesystemCachePool;
+use App\Services\GitHostingProviderService;
 use Exception;
 use Github\AuthMethod;
 use Github\Client;
 use Github\Exception\MissingArgumentException;
 use Github\Exception\RuntimeException;
-use League\Flysystem\Adapter\Local;
-use League\Flysystem\Filesystem;
 use Symfony\Component\HttpClient\HttplugClient;
 
 
-class GitHubService
+class GitHubService extends GitHostingProviderService
 {
+    const REGEX_REPO_USER = '#^(https://github.com/|git@.*?github.com:|git://github.com/)(.*)\.git$#';
 
-    private Client $client;
-    private string $gitHubUrl;
+    protected string $provider = 'GitHub';
+    protected string $exceptionType = GitHubServiceException::class;
 
-    public function __construct(string $gitHubApiToken, string $dataFolder, string $gitHubUrl, bool $autoStartup = true)
+    /**
+     * @var Client
+     */
+    protected $client;
+
+
+    public function __construct(string $apiToken, string $dataFolder, string $url, bool $autoStartup = true)
     {
-        $this->gitHubUrl = $gitHubUrl;
+        parent::__construct($apiToken, $dataFolder, $url, $autoStartup);
         if (!$autoStartup) {
             return;
         }
-
-        $filesystemAdapter = new Local($dataFolder); // folders are relative to folder set here
-        $filesystem = new Filesystem($filesystemAdapter);
-
-        $pool = new FilesystemCachePool($filesystem);
-        $pool->setFolder('cache/github');
 
         $this->client = Client::createWithHttpClient(
             new HttplugClient()
         );
 
-        $this->client->addCache($pool);
-        $this->client->authenticate($gitHubApiToken, null, AuthMethod::ACCESS_TOKEN);
+        $this->client->addCache($this->getCachePool($dataFolder));
+        $this->client->authenticate($apiToken, null, AuthMethod::ACCESS_TOKEN);
     }
 
     /**
-     * Create fork in our GitHub account
-     *
-     * @param string $url GitHub URL to create the fork from
-     * @return string Git URL of the fork
+     * @inheritDoc
      *
      * @throws GitHubForkException
      * @throws GitHubServiceException
@@ -61,9 +57,7 @@ class GitHubService
     }
 
     /**
-     * Delete fork from our GitHub account
-     *
-     * @param string $remoteUrl git url of the forked repository
+     * @inheritDoc
      *
      * @throws GitHubServiceException
      */
@@ -78,11 +72,7 @@ class GitHubService
     }
 
     /**
-     * @param string $patchBranch name of branch with language update
-     * @param string $destinationBranch name of branch at remote
-     * @param string $languageCode
-     * @param string $url git url original upstream repository
-     * @param string $patchUrl remote url
+     * @inheritDoc
      *
      * @throws GitHubCreatePullRequestException
      * @throws GitHubServiceException
@@ -106,11 +96,7 @@ class GitHubService
     }
 
     /**
-     * Get information about the open pull requests i.e. url and count
-     *
-     * @param string $url original git clone url
-     * @param string $languageCode
-     * @return array{count: int, listURL: string, title: string}
+     * @inheritDoc
      *
      * @throws GitHubServiceException
      * @throws Exception only if in 'test' environment
@@ -146,31 +132,13 @@ class GitHubService
 
     /**
      * @param string $url git clone url
-     * @return array with user's account name, repository name
-     *
-     * @throws GitHubServiceException
-     */
-    private function getUsernameAndRepositoryFromURL(string $url): array
-    {
-        $result = preg_replace(
-            '#^(https://github.com/|git@.*?github.com:|git://github.com/)(.*)\.git$#',
-            '$2', $url, 1, $counter
-        );
-        if ($counter === 0) {
-            throw new GitHubServiceException('Invalid GitHub clone URL: ' . $url);
-        }
-        return explode('/', $result);
-    }
-
-    /**
-     * @param string $url git clone url
      * @return string modified git clone url
      */
     private function gitHubUrlHack(string $url): string
     {
-        if ($this->gitHubUrl === 'github.com') {
+        if ($this->url === 'github.com') {
             return $url;
         }
-        return str_replace('github.com', $this->gitHubUrl, $url);
+        return str_replace('github.com', $this->url, $url);
     }
 }

@@ -2,45 +2,44 @@
 
 namespace App\Services\GitLab;
 
-use Cache\Adapter\Filesystem\FilesystemCachePool;
+use App\Services\GitHostingProviderService;
 use Exception;
 use Gitlab\Api\MergeRequests;
 use Gitlab\Client;
 use Gitlab\Exception\RuntimeException;
 use Gitlab\HttpClient\Builder;
 use Http\Client\Common\Plugin\LoggerPlugin;
-use League\Flysystem\Adapter\Local;
-use League\Flysystem\Filesystem;
 use Psr\Log\LoggerInterface;
 
 
-class GitLabService
+class GitLabService extends GitHostingProviderService
 {
-    private string $gitLabUrl;
-    private Client $client;
+    const REGEX_REPO_USER = '#^(https://gitlab.com/|git@.*?gitlab.com:|git://gitlab.com/)(.*)\.git$#';
+
+    protected string $provider = 'GitLab';
+    protected string $exceptionType = GitLabServiceException::class;
+
+    /**
+     * @var Client
+     */
+    protected $client;
+
     private string $projectIdFolder;
 
-    public function __construct(string $gitLabApiToken, string $dataFolder, string $gitLabUrl, LoggerInterface $httpLogger, bool $autoStartup = true)
+    public function __construct(string $apiToken, string $dataFolder, string $url, LoggerInterface $httpLogger, bool $autoStartup = true)
     {
-        $this->gitLabUrl = $gitLabUrl;
+        parent::__construct($apiToken, $dataFolder, $url, $autoStartup);
         if (!$autoStartup) {
             return;
         }
 
-        $filesystemAdapter = new Local($dataFolder); // folders are relative to folder set here
-        $filesystem = new Filesystem($filesystemAdapter);
-
-        $pool = new FilesystemCachePool($filesystem);
-        $pool->setFolder('cache/gitlab');
-
-
         $loggerPlugin = new LoggerPlugin($httpLogger); //==new Logger('http')
         $builder = new Builder();
-        $builder->addCache($pool);
+        $builder->addCache($this->getCachePool($dataFolder));
         $builder->addPlugin($loggerPlugin);
         $this->client = new Client($builder);
 
-        $this->client->authenticate($gitLabApiToken, Client::AUTH_HTTP_TOKEN);
+        $this->client->authenticate($apiToken, Client::AUTH_HTTP_TOKEN);
     }
 
     public function setProjectIdFolder(string $projectIdFolder): void
@@ -69,10 +68,7 @@ class GitLabService
     }
 
     /**
-     * Create fork in our GitLab account
-     *
-     * @param string $url GitLab URL to create the fork from
-     * @return string Git URL of the fork
+     * @inheritDoc
      *
      * @throws GitLabForkException
      * @throws GitLabServiceException
@@ -91,9 +87,7 @@ class GitLabService
     }
 
     /**
-     * Delete fork from our GitHub account
-     *
-     * @param string $remoteUrl git url of the forked repository
+     * @inheritDoc
      *
      * @throws GitLabServiceException
      */
@@ -112,11 +106,7 @@ class GitLabService
 
 
     /**
-     * @param string $patchBranch name of branch with language update
-     * @param string $destinationBranch name of branch at remote
-     * @param string $languageCode
-     * @param string $url git url original upstream repository
-     * @param string $patchUrl remote url
+     * @inheritDoc
      *
      * @throws GitLabCreateMergeRequestException
      * @throws GitLabServiceException
@@ -145,11 +135,7 @@ class GitLabService
     }
 
     /**
-     * Get information about the open pull requests i.e. url and count
-     *
-     * @param string $urlUpstream original git clone url
-     * @param string $languageCode
-     * @return array{count: int, listURL: string, title: string}
+     * @inheritDoc
      *
      * @throws GitLabServiceException
      * @throws Exception only if in 'test' environment
@@ -187,31 +173,15 @@ class GitLabService
         return $info;
     }
 
-
-    /**
-     * @param string $url git clone url
-     * @return array with user's account name, repository name
-     *
-     * @throws GitLabServiceException
-     */
-    private function getUsernameAndRepositoryFromURL(string $url): array
-    {
-        $result = preg_replace('#^(https://gitlab.com/|git@.*?gitlab.com:|git://gitlab.com/)(.*)\.git$#', '$2', $url, 1, $counter);
-        if ($counter === 0) {
-            throw new GitLabServiceException('Invalid GitLab clone URL: ' . $url);
-        }
-        return explode('/', $result);
-    }
-
     /**
      * @param string $url git clone url
      * @return string modified git clone url
      */
     private function gitLabUrlHack(string $url): string
     {
-        if ($this->gitLabUrl === 'gitlab.com') {
+        if ($this->url === 'gitlab.com') {
             return $url;
         }
-        return str_replace('gitlab.com', $this->gitLabUrl, $url);
+        return str_replace('gitlab.com', $this->url, $url);
     }
 }
