@@ -1,5 +1,7 @@
 <?php
 
+/** @noinspection PhpMultiplecClassDeclarationsInspection */
+
 namespace App\Services\GitHub;
 
 use App\Services\GitHostingProviderStatusService;

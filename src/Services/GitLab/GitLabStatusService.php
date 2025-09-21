@@ -1,5 +1,7 @@
 <?php
 
+/** @noinspection PhpMultipleClassDeclarationsInspection */
+
 namespace App\Services\GitLab;
 
 use App\Services\GitHostingProviderStatusService;
