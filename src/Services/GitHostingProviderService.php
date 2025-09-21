@@ -83,11 +83,12 @@ abstract class GitHostingProviderService
     /**
      * @param string $patchBranch name of branch with language update
      * @param string $destinationBranch name of branch at remote
-     * @param string $languageCode
      * @param string $url git url original upstream repository
      * @param string $patchUrl remote url
+     * @param string $title Title for the pull request
+     * @param string $body Text to be inserted as description for the pull request
      */
-    abstract public function createPullRequest(string $patchBranch, string $destinationBranch, string $languageCode, string $url, string $patchUrl): void;
+    abstract public function createPullRequest(string $patchBranch, string $destinationBranch, string $url, string $patchUrl, string $title, string $body): void;
 
     /**
      * Get information about the open pull requests i.e. url and count

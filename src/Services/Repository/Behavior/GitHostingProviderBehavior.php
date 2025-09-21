@@ -70,9 +70,10 @@ abstract class GitHostingProviderBehavior implements RepositoryBehavior
         $this->api->createPullRequest(
             $branchName,
             $update->getRepository()->getBranch(),
-            $update->getLanguage(),
             $update->getRepository()->getUrl(),
-            $remoteUrl
+            $remoteUrl,
+            'Translation update (' . $update->getLanguage() . ')',
+            'This pull request contains some translation updates.'
         );
     }
 

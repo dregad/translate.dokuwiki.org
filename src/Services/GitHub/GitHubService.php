@@ -78,7 +78,7 @@ class GitHubService extends GitHostingProviderService
      * @throws GitHubServiceException
      * @throws MissingArgumentException
      */
-    public function createPullRequest(string $patchBranch, string $destinationBranch, string $languageCode, string $url, string $patchUrl): void
+    public function createPullRequest(string $patchBranch, string $destinationBranch, string $url, string $patchUrl, string $title, string $body): void
     {
         [$user, $repository] = $this->getUsernameAndRepositoryFromURL($url);
         [$repoName, ] = $this->getUsernameAndRepositoryFromURL($patchUrl);
@@ -87,8 +87,8 @@ class GitHubService extends GitHostingProviderService
             $this->client->api('pull_request')->create($user, $repository, [
                 'base' => $destinationBranch,
                 'head' => $repoName . ':' . $patchBranch,
-                'title' => 'Translation update (' . $languageCode . ')',
-                'body' => 'This pull request contains some translation updates.'
+                'title' => $title,
+                'body' => $body,
             ]);
         } catch (RuntimeException $e) {
             throw new GitHubCreatePullRequestException($e->getMessage() . " $user/$repository", 0, $e);

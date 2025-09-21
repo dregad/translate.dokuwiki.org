@@ -111,7 +111,7 @@ class GitLabService extends GitHostingProviderService
      * @throws GitLabCreateMergeRequestException
      * @throws GitLabServiceException
      */
-    public function createPullRequest(string $patchBranch, string $destinationBranch, string $languageCode, string $url, string $patchUrl): void
+    public function createPullRequest(string $patchBranch, string $destinationBranch, string $url, string $patchUrl, string $title, string $body): void
     {
         [$userUpstream, $repositoryUpstream] = $this->getUsernameAndRepositoryFromURL($url);
         $idUpstream = $this->getProjectIdOfUpstream();
@@ -122,9 +122,9 @@ class GitLabService extends GitHostingProviderService
                 "$userFork/$repositoryFork",
                 $patchBranch,
                 $destinationBranch,
-                "Translation update ($languageCode)",
+                $title,
                 [
-                    'description' => 'This pull request contains some translation updates.',
+                    'description' => $body,
                     'target_project_id' => $idUpstream,
                     'remove_source_branch' => true
                 ]
