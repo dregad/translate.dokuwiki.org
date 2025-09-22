@@ -80,7 +80,7 @@ abstract class GitHostingProviderBehavior implements RepositoryBehavior
             $update->getRepository()->getBranch(),
             $update->getRepository()->getUrl(),
             $remoteUrl,
-            'Translation update (' . $update->getLanguage() . ')',
+            $update->getSubject(),
             $this->prBody
         );
     }
