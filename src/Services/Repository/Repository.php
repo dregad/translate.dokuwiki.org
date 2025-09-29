@@ -500,8 +500,9 @@ abstract class Repository
         // add files to local temporary git repository
         $this->applyChanges($tmpGit, $tmpDir, $update);
         // commit files to local temporary git repository
+        $message = 'Translation update (' . $update->getLanguage() . ')';
         $author = $this->prepareAuthor($update);
-        $tmpGit->commit('translation update', $author);
+        $tmpGit->commit($message, $author);
 
         $this->behavior->sendChange($tmpGit, $update, $this->git);
     }
