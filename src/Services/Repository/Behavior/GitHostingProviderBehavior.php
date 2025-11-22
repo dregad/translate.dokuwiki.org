@@ -15,27 +15,17 @@ use App\Services\Git\GitRepository;
 use App\Services\GitHostingProviderService;
 use App\Services\GitHostingProviderStatusService;
 
-/**
- * Generic Git Hosting Provider Behavior.
- *
- * @see GitHubBehavior, GitLabBehavior
- */
-abstract class GitHostingProviderBehavior implements RepositoryBehavior
+class GitHostingProviderBehavior implements RepositoryBehavior
 {
     /**
-     * Git Service api.
+     * Git Service api, provider specific
      */
     protected GitHostingProviderService $api;
 
     /**
-     * Git Service status.
+     * Service for status of the api
      */
     protected GitHostingProviderStatusService $status;
-
-    /**
-     * Git repository remote name
-     */
-    protected string $remote;
 
     /**
      * Text to be inserted as description for the pull request.
@@ -53,7 +43,7 @@ abstract class GitHostingProviderBehavior implements RepositoryBehavior
     }
 
     /**
-     * Create branch and push it to remote, then submit a pull request
+     * Create branch and push it to the remote fork, then submit a pull request
      *
      * @param GitRepository $tempGit temporary local git repository with the patch of the language update
      * @param TranslationUpdateEntity $update
@@ -68,12 +58,12 @@ abstract class GitHostingProviderBehavior implements RepositoryBehavior
     public function sendChange(GitRepository $tempGit, TranslationUpdateEntity $update, GitRepository $forkedGit): void
     {
         $remoteUrl = $forkedGit->getRemoteUrl();
-        $tempGit->remoteAdd($this->remote, $remoteUrl);
+        $tempGit->remoteAdd('remote_fork', $remoteUrl);
         $branchName = 'lang_update_' . $update->getId() . '_' . $update->getUpdated();
         $tempGit->branch($branchName);
         $tempGit->checkout($branchName);
 
-        $tempGit->push($this->remote, $branchName);
+        $tempGit->push('remote_fork', $branchName);
 
         $this->api->createPullRequest(
             $branchName,
